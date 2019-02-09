@@ -13,7 +13,7 @@ import java.net.Socket;
  * Multiple instances of ChatbotServer will be run on different ports
  * with a port-based load balancer to handle multiple clients.
  *
- * @author <Nick Malensek>
+ * @author Nick Malensek
  */
 
 public class ChatbotServer {
@@ -50,13 +50,12 @@ public class ChatbotServer {
      * Handle interaction with a single client.  See assignment description.
      */
     public void handleOneClient() {
-        try {
-            Socket s = serversocket.accept();
+        try (Socket s = serversocket.accept()) {
             BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
             PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 
             String input;
-            while((input = in.readLine()) != null) {
+            while ((input = in.readLine()) != null) {
                 try {
                     out.println(chatbot.getResponse(input));
                 } catch (AIException aie) {

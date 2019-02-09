@@ -12,10 +12,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
 
 /**
- * @author <Nick Malensek>
+ * @author Nick Malensek
  */
 
 @RunWith(MockitoJUnitRunner.class)
@@ -43,46 +44,7 @@ public class TestChatbotServer {
     }
 
     @Test
-    public void testOneInput() throws IOException, AIException {
-        when(mockServerSocket.accept()).thenReturn(mockSocket);
-        InputStream s = new ByteArrayInputStream(("chatbot\n").getBytes());
-
-        when(mockSocket.getInputStream()).thenReturn(s);
-
-        OutputStream outputStream = new ByteArrayOutputStream();
-        when(mockSocket.getOutputStream()).thenReturn(outputStream);
-
-        when(mockChatbot.getResponse("chatbot")).thenReturn("chatbot response");
-
-        myServer.handleOneClient();
-
-        assertEquals("chatbot response", mockChatbot.getResponse("chatbot"));
-        assertEquals("chatbot response\n", outputStream.toString());
-        verify(mockServerSocket, times(1)).accept();
-    }
-
-    @Test
-    public void testMultipleInputs() throws IOException, AIException {
-        when(mockServerSocket.accept()).thenReturn(mockSocket);
-        InputStream s = new ByteArrayInputStream(("hello\nhow are you?\nstop copying me").getBytes());
-
-        when(mockSocket.getInputStream()).thenReturn(s);
-
-        OutputStream outputStream = new ByteArrayOutputStream();
-        when(mockSocket.getOutputStream()).thenReturn(outputStream);
-
-        when(mockChatbot.getResponse("hello")).thenReturn("hello response");
-        when(mockChatbot.getResponse("how are you?")).thenReturn("how are you? response");
-        when(mockChatbot.getResponse("stop copying me")).thenReturn("stop copying me response");
-
-        myServer.handleOneClient();
-
-        assertEquals("hello response\nhow are you? response\nstop copying me response\n", outputStream.toString());
-        verify(mockServerSocket, times(1)).accept();
-    }
-
-    @Test
-    public void testBlankInput() throws IOException, AIException {
+    public void testBlankInput() throws Exception {
         when(mockServerSocket.accept()).thenReturn(mockSocket);
         InputStream inputStream1 = new ByteArrayInputStream(("\n").getBytes());
         InputStream inputStream2 = new ByteArrayInputStream("hello\n".getBytes());
@@ -105,7 +67,48 @@ public class TestChatbotServer {
     }
 
     @Test
-    public void canHandleMultipleClients() throws IOException, AIException {
+    public void testOneInput() throws Exception {
+        when(mockServerSocket.accept()).thenReturn(mockSocket);
+        InputStream s = new ByteArrayInputStream(("chatbot\n").getBytes());
+
+        when(mockSocket.getInputStream()).thenReturn(s);
+
+        OutputStream outputStream = new ByteArrayOutputStream();
+        when(mockSocket.getOutputStream()).thenReturn(outputStream);
+
+        when(mockChatbot.getResponse("chatbot")).thenReturn("chatbot response");
+
+        myServer.handleOneClient();
+
+        assertEquals("chatbot response", mockChatbot.getResponse("chatbot"));
+        assertEquals("chatbot response\n", outputStream.toString());
+        verify(mockServerSocket, times(1)).accept();
+        verify(mockSocket, times(1)).close();
+    }
+
+    @Test
+    public void testMultipleInputsSameClient() throws Exception {
+        when(mockServerSocket.accept()).thenReturn(mockSocket);
+        InputStream s = new ByteArrayInputStream(("hello\nhow are you?\nstop copying me").getBytes());
+
+        when(mockSocket.getInputStream()).thenReturn(s);
+
+        OutputStream outputStream = new ByteArrayOutputStream();
+        when(mockSocket.getOutputStream()).thenReturn(outputStream);
+
+        when(mockChatbot.getResponse("hello")).thenReturn("hello response");
+        when(mockChatbot.getResponse("how are you?")).thenReturn("how are you? response");
+        when(mockChatbot.getResponse("stop copying me")).thenReturn("stop copying me response");
+
+        myServer.handleOneClient();
+
+        assertEquals("hello response\nhow are you? response\nstop copying me response\n", outputStream.toString());
+        verify(mockServerSocket, times(1)).accept();
+        verify(mockSocket, times(1)).close();
+    }
+
+    @Test
+    public void canHandleMultipleClients() throws Exception {
         int i = 0;
 
         while (i < 5) {
@@ -126,15 +129,11 @@ public class TestChatbotServer {
         }
 
         verify(mockServerSocket, times(5)).accept();
+        verify(mockSocket, times(5)).close();
     }
 
     @Test
-    public void newClientCanConnectAfterDisconnect() throws IOException {
-
-    }
-
-    @Test
-    public void chatBotServerReturnsAiExceptionToClient() throws IOException, AIException {
+    public void chatBotServerReturnsAiExceptionToClient() throws Exception {
         when(mockServerSocket.accept()).thenReturn(mockSocket);
         InputStream inputStream = new ByteArrayInputStream(("hola\n").getBytes());
 
@@ -154,7 +153,7 @@ public class TestChatbotServer {
     }
 
     @Test
-    public void onNetworkExceptionPrintStackTraceAndWaitForNewConnection() throws IOException, AIException {
+    public void onNetworkExceptionPrintStackTraceAndWaitForNewConnection() throws Exception {
 
         when(mockServerSocket.accept()).thenReturn(mockSocket);
         InputStream inputStream = new ByteArrayInputStream(("hello\n").getBytes());
@@ -171,6 +170,6 @@ public class TestChatbotServer {
         }
 
         verify(mockChatbot, times(1)).getResponse("hello");
-
+        verify(mockSocket, times(2)).close();
     }
 }
