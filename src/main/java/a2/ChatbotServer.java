@@ -57,13 +57,13 @@ public class ChatbotServer {
 
             String input;
             while((input = in.readLine()) != null) {
-                String x = "";
-                x = chatbot.getResponse(input);
-                out.println(x);
+                try {
+                    out.println(chatbot.getResponse(input));
+                } catch (AIException aie) {
+                    out.println("Got AIException: " + aie.getMessage());
+                }
             }
         } catch (IOException e) {
-            e.printStackTrace();
-        } catch (AIException e) {
             e.printStackTrace();
         }
     }

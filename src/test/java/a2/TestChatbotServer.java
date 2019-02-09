@@ -15,14 +15,11 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
- *
  * @author <Nick Malensek>
  */
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestChatbotServer {
-
-    public String lineSeparator = System.getProperty("line.separator");
 
     @Mock
     public Chatbot mockChatbot;
@@ -45,18 +42,6 @@ public class TestChatbotServer {
 
     }
 
-//    @Test
-//    public void testOutput() throws Exception{
-//        when(mockServerSocket.accept()).thenReturn(mockSocket);
-//
-//        OutputStream outputStream = new ByteArrayOutputStream();
-//        when(mockSocket.getOutputStream()).thenReturn(outputStream);
-//
-//        myServer.handleOneClient();
-//
-//        assertEquals("Output\n", outputStream.toString());
-//    }
-
     @Test
     public void testOneInput() throws IOException, AIException {
         when(mockServerSocket.accept()).thenReturn(mockSocket);
@@ -73,6 +58,7 @@ public class TestChatbotServer {
 
         assertEquals("chatbot response", mockChatbot.getResponse("chatbot"));
         assertEquals("chatbot response\n", outputStream.toString());
+        verify(mockServerSocket, times(1)).accept();
     }
 
     @Test
@@ -92,6 +78,30 @@ public class TestChatbotServer {
         myServer.handleOneClient();
 
         assertEquals("hello response\nhow are you? response\nstop copying me response\n", outputStream.toString());
+        verify(mockServerSocket, times(1)).accept();
+    }
+
+    @Test
+    public void testBlankInput() throws IOException, AIException {
+        when(mockServerSocket.accept()).thenReturn(mockSocket);
+        InputStream inputStream1 = new ByteArrayInputStream(("\n").getBytes());
+        InputStream inputStream2 = new ByteArrayInputStream("hello\n".getBytes());
+
+        when(mockSocket.getInputStream()).thenReturn(inputStream1).thenReturn(inputStream2);
+
+        OutputStream outputStream = new ByteArrayOutputStream();
+        when(mockSocket.getOutputStream()).thenReturn(outputStream);
+
+        when(mockChatbot.getResponse("")).thenReturn("");
+        when(mockChatbot.getResponse("hello")).thenReturn("hello, how are you?");
+
+        for (int i = 0; i < 2; i++) {
+            myServer.handleOneClient();
+        }
+
+        verify(mockServerSocket, times(2)).accept();
+        assertEquals("\nhello, how are you?\n", outputStream.toString());
+
     }
 
     @Test
@@ -111,16 +121,11 @@ public class TestChatbotServer {
 
             myServer.handleOneClient();
 
-            assertEquals("hello" + i +" response\n", outputStream.toString());
+            assertEquals("hello" + i + " response\n", outputStream.toString());
             i++;
         }
 
         verify(mockServerSocket, times(5)).accept();
-    }
-
-    @Test
-    public void clientCanDisconnect() throws IOException {
-
     }
 
     @Test
@@ -129,12 +134,43 @@ public class TestChatbotServer {
     }
 
     @Test
-    public void chatBotServerReturnsAiExceptionToClient() {
+    public void chatBotServerReturnsAiExceptionToClient() throws IOException, AIException {
+        when(mockServerSocket.accept()).thenReturn(mockSocket);
+        InputStream inputStream = new ByteArrayInputStream(("hola\n").getBytes());
+
+        when(mockSocket.getInputStream()).thenReturn(inputStream);
+
+        OutputStream outputStream = new ByteArrayOutputStream();
+        when(mockSocket.getOutputStream()).thenReturn(outputStream);
+
+        AIException aiException = new AIException("Input string is not in English");
+
+        when(mockChatbot.getResponse("hola")).thenThrow(aiException);
+
+        myServer.handleOneClient();
+
+        assertEquals("Got AIException: Input string is not in English\n", outputStream.toString());
 
     }
 
     @Test
-    public void onNetworkExceptionPrintStackTraceAndWaitForNewConnection() {
+    public void onNetworkExceptionPrintStackTraceAndWaitForNewConnection() throws IOException, AIException {
+
+        when(mockServerSocket.accept()).thenReturn(mockSocket);
+        InputStream inputStream = new ByteArrayInputStream(("hello\n").getBytes());
+
+        when(mockSocket.getInputStream()).thenThrow(IOException.class).thenReturn(inputStream);
+
+        OutputStream outputStream = new ByteArrayOutputStream();
+        when(mockSocket.getOutputStream()).thenReturn(outputStream);
+
+        when(mockChatbot.getResponse("hello")).thenReturn("hello response");
+
+        for (int i = 0; i < 2; i++) {
+            myServer.handleOneClient();
+        }
+
+        verify(mockChatbot, times(1)).getResponse("hello");
 
     }
 }
